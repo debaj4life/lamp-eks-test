@@ -30,6 +30,7 @@ on:
 permissions:
   id-token: write
   contents: read
+  actions: write
 
 env:
   AWS_REGION: eu-west-2
@@ -106,3 +107,14 @@ jobs:
         run: |
           terraform plan -out=tfplan
           terraform apply -auto-approve tfplan
+
+      - name: Trigger application deploy workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy.yml',
+              ref: 'main'
+            })
