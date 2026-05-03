@@ -120,8 +120,12 @@ jobs:
       - name: Set live RDS endpoint in deployment
         if: steps.check-eks.outputs.cluster_exists == 'true' && steps.check-k8s-auth.outputs.has_k8s_access == 'true'
         run: |
-          RDS_ENDPOINT="$(aws rds describe-db-instances --region "$AWS_REGION" --query 'DBInstances[0].Endpoint.Address' --output text)"
-          kubectl set env deployment/$K8S_DEPLOYMENT_NAME WORDPRESS_DB_HOST="$RDS_ENDPOINT"
+          RDS_ENDPOINT="$(aws rds describe-db-instances --region "$AWS_REGION" --query 'DBInstances[0].Endpoint.Address' --output text 2>/dev/null || true)"
+          if [ -n "$RDS_ENDPOINT" ] && [ "$RDS_ENDPOINT" != "None" ]; then
+            kubectl set env deployment/$K8S_DEPLOYMENT_NAME WORDPRESS_DB_HOST="$RDS_ENDPOINT"
+          else
+            echo "Could not read RDS endpoint with current IAM role; keeping existing WORDPRESS_DB_HOST value."
+          fi
 
       - name: Apply Kubernetes manifests
         if: steps.check-eks.outputs.cluster_exists == 'true' && steps.check-k8s-auth.outputs.has_k8s_access == 'true'
