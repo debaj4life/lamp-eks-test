@@ -1,0 +1,9 @@
+output "eks_cluster_endpoint" {
+  description = "EKS cluster API endpoint"
+  value       = module.eks.cluster_endpoint
+}
+
+output "eks_cluster_name" {
+  description = "EKS cluster name"
+  value       = module.eks.cluster_name
+}

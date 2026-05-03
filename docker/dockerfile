@@ -1,0 +1,40 @@
+FROM wordpress:6.5-php8.2-apache
+
+# Install additional PHP extensions
+RUN apt-get update && apt-get install -y \
+    libpng-dev \
+    libjpeg-dev \
+    libwebp-dev \
+    libzip-dev \
+    && docker-php-ext-configure gd --with-jpeg --with-webp \
+    && docker-php-ext-install gd zip opcache \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure OPcache for production
+RUN { \
+    echo 'opcache.memory_consumption=128'; \
+    echo 'opcache.interned_strings_buffer=8'; \
+    echo 'opcache.max_accelerated_files=4000'; \
+    echo 'opcache.revalidate_freq=2'; \
+    echo 'opcache.fast_shutdown=1'; \
+    echo 'opcache.enable_cli=1'; \
+} > /usr/local/etc/php/conf.d/opcache-recommended.ini
+
+# Set recommended PHP settings
+RUN { \
+    echo 'upload_max_filesize=64M'; \
+    echo 'post_max_size=64M'; \
+    echo 'memory_limit=256M'; \
+    echo 'max_execution_time=300'; \
+} > /usr/local/etc/php/conf.d/wordpress-recommended.ini
+
+# Enable Apache mod_rewrite for WordPress permalinks
+RUN a2enmod rewrite
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Use non-root user for security
+RUN chown -R www-data:www-data /var/www/html
+
+EXPOSE 80
