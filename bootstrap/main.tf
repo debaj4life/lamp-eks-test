@@ -198,6 +198,12 @@ data "aws_iam_policy_document" "app_deploy_permissions" {
   }
 
   statement {
+    sid       = "RdsDescribe"
+    actions   = ["rds:DescribeDBInstances"]
+    resources = ["*"]
+  }
+
+  statement {
     sid = "EcrPush"
     actions = [
       "ecr:BatchCheckLayerAvailability",
