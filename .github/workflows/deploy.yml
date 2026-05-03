@@ -69,19 +69,18 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER_NAME"
 
-      - name: Skip DB secret update (password not configured)
-        if: ${{ secrets.WORDPRESS_DB_PASSWORD == '' }}
-        run: echo "WORDPRESS_DB_PASSWORD is not set; skipping wp-db-secret update."
-
       - name: Create or update WordPress DB secret
-        if: ${{ secrets.WORDPRESS_DB_PASSWORD != '' }}
         env:
           WORDPRESS_DB_PASSWORD: ${{ secrets.WORDPRESS_DB_PASSWORD }}
         run: |
-          kubectl create secret generic wp-db-secret \
-            --from-literal=password="$WORDPRESS_DB_PASSWORD" \
-            --dry-run=client \
-            -o yaml | kubectl apply -f -
+          if [ -z "$WORDPRESS_DB_PASSWORD" ]; then
+            echo "WORDPRESS_DB_PASSWORD is not set; skipping wp-db-secret update."
+          else
+            kubectl create secret generic wp-db-secret \
+              --from-literal=password="$WORDPRESS_DB_PASSWORD" \
+              --dry-run=client \
+              -o yaml | kubectl apply -f -
+          fi
 
       - name: Apply Kubernetes manifests
         run: |
