@@ -67,11 +67,17 @@ jobs:
       - name: Terraform plan
         run: terraform plan -out=tfplan
 
+      - name: Upload plan artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: tfplan
+
   apply:
     if: github.event_name == 'workflow_dispatch'
     needs: plan
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
       - name: Check out repository
@@ -94,10 +100,13 @@ jobs:
             -backend-config="region=${{ env.AWS_REGION }}" \
             -backend-config="dynamodb_table=${{ secrets.TF_STATE_LOCK_TABLE }}"
 
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+
       - name: Terraform apply
-        run: |
-          terraform plan -out=tfplan
-          terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan
 
       - name: Trigger application deploy workflow
         uses: actions/github-script@v7
@@ -107,5 +116,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'deploy.yml',
-              ref: 'main'
+              ref: context.ref
             })
