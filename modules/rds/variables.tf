@@ -19,8 +19,8 @@ variable "security_group_id" {
 }
 
 variable "instance_class" {
-  type    = string
-  default = "db.t3.micro"
+  type        = string
+  default     = "db.t3.micro"
   description = "RDS MySQL instance class; must be a supported combination for the engine version. t3.micro is compatible with MySQL 8.0."
 }
 

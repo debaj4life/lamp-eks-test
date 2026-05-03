@@ -170,7 +170,7 @@ data "aws_iam_policy_document" "terraform_permissions" {
   }
 
   statement {
-    sid = "TerraformPassRole"
+    sid     = "TerraformPassRole"
     actions = ["iam:PassRole"]
     resources = [
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/techrite-*",
