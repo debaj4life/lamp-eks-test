@@ -80,8 +80,20 @@ jobs:
         if: steps.check-eks.outputs.cluster_exists == 'true'
         run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER_NAME"
 
-      - name: Create or update WordPress DB secret
+      - name: Check Kubernetes API access
         if: steps.check-eks.outputs.cluster_exists == 'true'
+        id: check-k8s-auth
+        run: |
+          if kubectl auth can-i get pods --all-namespaces >/dev/null 2>&1; then
+            echo "has_k8s_access=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_k8s_access=false" >> "$GITHUB_OUTPUT"
+            echo "No Kubernetes RBAC access for this IAM role."
+            echo "Add the app deploy role to aws-auth mapRoles, then rerun deploy."
+          fi
+
+      - name: Create or update WordPress DB secret
+        if: steps.check-eks.outputs.cluster_exists == 'true' && steps.check-k8s-auth.outputs.has_k8s_access == 'true'
         env:
           WORDPRESS_DB_PASSWORD: ${{ secrets.WORDPRESS_DB_PASSWORD }}
         run: |
@@ -95,13 +107,13 @@ jobs:
           fi
 
       - name: Apply Kubernetes manifests
-        if: steps.check-eks.outputs.cluster_exists == 'true'
+        if: steps.check-eks.outputs.cluster_exists == 'true' && steps.check-k8s-auth.outputs.has_k8s_access == 'true'
         run: |
           kubectl apply -f kubernetes/wordpress-deployment.yaml
           kubectl apply -f kubernetes/wordpress-service.yaml
 
       - name: Update deployment image
-        if: steps.check-eks.outputs.cluster_exists == 'true'
+        if: steps.check-eks.outputs.cluster_exists == 'true' && steps.check-k8s-auth.outputs.has_k8s_access == 'true'
         env:
           IMAGE_URI: ${{ steps.build-image.outputs.image_uri }}
         run: |
