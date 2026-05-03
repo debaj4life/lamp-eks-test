@@ -21,6 +21,12 @@ variable "github_branches" {
   default     = ["main", "master"]
 }
 
+variable "github_environments" {
+  description = "GitHub Environments allowed to assume the Terraform role"
+  type        = list(string)
+  default     = ["production", "production-destroy"]
+}
+
 variable "tf_state_bucket_name" {
   description = "Optional explicit name for the Terraform state bucket"
   type        = string

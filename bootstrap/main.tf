@@ -6,6 +6,10 @@ locals {
   state_bucket_name = var.tf_state_bucket_name != "" ? var.tf_state_bucket_name : "${var.project_name}-tf-state-${data.aws_caller_identity.current.account_id}"
   lock_table_name   = var.tf_lock_table_name != "" ? var.tf_lock_table_name : "${var.project_name}-tf-locks"
   branch_subjects   = [for branch in var.github_branches : "repo:${var.github_repository}:ref:refs/heads/${branch}"]
+  environment_subjects = [
+    for environment in var.github_environments :
+    "repo:${var.github_repository}:environment:${environment}"
+  ]
 }
 
 resource "aws_s3_bucket" "tf_state" {
@@ -74,7 +78,11 @@ data "aws_iam_policy_document" "terraform_assume_role" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = concat(local.branch_subjects, ["repo:${var.github_repository}:pull_request"])
+      values = concat(
+        local.branch_subjects,
+        ["repo:${var.github_repository}:pull_request"],
+        local.environment_subjects,
+      )
     }
   }
 }
