@@ -66,10 +66,22 @@ jobs:
           sudo mv kubectl /usr/local/bin/kubectl
           kubectl version --client
 
+      - name: Check EKS cluster availability
+        id: check-eks
+        run: |
+          if aws eks describe-cluster --region "$AWS_REGION" --name "$EKS_CLUSTER_NAME" >/dev/null 2>&1; then
+            echo "cluster_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "cluster_exists=false" >> "$GITHUB_OUTPUT"
+            echo "EKS cluster '$EKS_CLUSTER_NAME' not found in region '$AWS_REGION'. Skipping Kubernetes deploy steps."
+          fi
+
       - name: Update kubeconfig
+        if: steps.check-eks.outputs.cluster_exists == 'true'
         run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER_NAME"
 
       - name: Create or update WordPress DB secret
+        if: steps.check-eks.outputs.cluster_exists == 'true'
         env:
           WORDPRESS_DB_PASSWORD: ${{ secrets.WORDPRESS_DB_PASSWORD }}
         run: |
@@ -83,11 +95,13 @@ jobs:
           fi
 
       - name: Apply Kubernetes manifests
+        if: steps.check-eks.outputs.cluster_exists == 'true'
         run: |
           kubectl apply -f kubernetes/wordpress-deployment.yaml
           kubectl apply -f kubernetes/wordpress-service.yaml
 
       - name: Update deployment image
+        if: steps.check-eks.outputs.cluster_exists == 'true'
         env:
           IMAGE_URI: ${{ steps.build-image.outputs.image_uri }}
         run: |
