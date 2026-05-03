@@ -117,6 +117,12 @@ jobs:
               -o yaml | kubectl apply -f -
           fi
 
+      - name: Set live RDS endpoint in deployment
+        if: steps.check-eks.outputs.cluster_exists == 'true' && steps.check-k8s-auth.outputs.has_k8s_access == 'true'
+        run: |
+          RDS_ENDPOINT="$(aws rds describe-db-instances --region "$AWS_REGION" --query 'DBInstances[0].Endpoint.Address' --output text)"
+          kubectl set env deployment/$K8S_DEPLOYMENT_NAME WORDPRESS_DB_HOST="$RDS_ENDPOINT"
+
       - name: Apply Kubernetes manifests
         if: steps.check-eks.outputs.cluster_exists == 'true' && steps.check-k8s-auth.outputs.has_k8s_access == 'true'
         run: |
